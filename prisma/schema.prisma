@@ -1,0 +1,612 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  
+}
+
+/**
+ * ========================= ENUMS =========================
+ */
+
+enum Gender {
+  male
+  female
+  other
+}
+
+enum EmploymentType {
+  full_time
+  part_time
+  contractor
+}
+
+enum EmployeeStatus {
+  active
+  terminated
+  on_leave
+  suspended
+}
+
+enum AttendanceSource {
+  web
+  biometric
+  mobile
+}
+
+enum AttendanceStatus {
+  present
+  absent
+  holiday
+  leave
+}
+
+enum TimesheetStatus {
+  draft
+  submitted
+  approved
+  rejected
+}
+
+enum LeaveStatus {
+  pending
+  approved
+  rejected
+  cancelled
+}
+
+enum PayrollComponentType {
+  earning
+  deduction
+  statutory
+}
+
+enum GoalStatus {
+  active
+  completed
+  cancelled
+}
+
+enum ReviewMode {
+  onsite
+  remote
+  phone
+}
+
+enum JobStatus {
+  open
+  closed
+}
+
+/**
+ * ========================= MODELS =========================
+ */
+
+model employees {
+  id              Int             @id @default(autoincrement())
+  employee_code   String          @unique
+  first_name      String
+  middle_name     String?
+  last_name       String
+  display_name    String?
+  email           String          @unique
+  phone           String?
+  dob             DateTime?
+  gender          Gender?
+  address         Json?
+  bank_details    Json?
+  national_id     Json?
+  joining_date    DateTime?
+  end_date        DateTime?
+  password_hash        String
+  status          EmployeeStatus?
+  employment_type EmploymentType?
+  custom_fields   Json?
+  created_at      DateTime?       @default(now())
+  updated_at      DateTime?       @updatedAt
+  department_id  Int?
+  designation_id Int?
+  manager_id     Int?
+
+  department  departments?  @relation(fields: [department_id], references: [id])
+  designation designations? @relation(fields: [designation_id], references: [id])
+
+  // Self relation (manager → subordinates)
+  manager      employees?  @relation("EmployeeManager", fields: [manager_id], references: [id])
+  subordinates employees[] @relation("EmployeeManager")
+
+  // Documents
+  documents          employee_documents[]
+  uploaded_documents employee_documents[] @relation("DocumentUploader")
+
+  // Attendance & time
+  attendance          attendance_records[]
+  timesheets          timesheets[] // as employee
+  timesheets_approved timesheets[]         @relation("TimesheetApprover")
+
+  // Leave
+  leaves          leave_applications[]
+  leave_balances  leave_balances[]
+  leave_approvals leave_applications[] @relation("LeaveApprover")
+
+  // Payroll
+  payroll_assignment employee_payroll_assignments[]
+  payslips           payslips[]
+
+  // Performance
+  goals              performance_goals[]
+  reviews            performance_reviews[] @relation("EmployeeReview")
+  review_as_reviewer performance_reviews[] @relation("ReviewerRelation")
+  feedbacks          review_feedback[]
+
+  // Roles / auth
+  roles user_roles[]
+
+  // Expenses
+  expenses          expenses[] // as owner/submitter
+  approved_expenses expenses[] @relation("ExpenseApprover")
+
+  // Training
+  training_records training_enrollments[]
+
+  // Jobs / offers
+  managed_jobs jobs[] // hiring_manager
+  offers       offers[] // offers.offerrer
+
+  // Communication / logs
+  announcements announcements[]
+  audit_logs    audit_logs[]
+}
+
+model employee_documents {
+  id            Int       @id @default(autoincrement())
+  employee_id   Int
+  doc_type      String
+  file_path     String
+  file_metadata Json?
+  uploaded_by   Int?
+  uploaded_at   DateTime? @default(now())
+  expiry_date   DateTime?
+  verified      Boolean?
+
+  employee employees  @relation(fields: [employee_id], references: [id])
+  uploader employees? @relation("DocumentUploader", fields: [uploaded_by], references: [id])
+}
+
+model departments {
+  id                   Int       @id @default(autoincrement())
+  name                 String
+  code                 String
+  parent_department_id Int?
+  description          String?
+  created_at           DateTime? @default(now())
+  updated_at           DateTime? @updatedAt
+
+  parent    departments?  @relation("DeptHierarchy", fields: [parent_department_id], references: [id])
+  children  departments[] @relation("DeptHierarchy")
+  employees employees[]
+  jobs      jobs[] // back relation from jobs.department
+}
+
+model designations {
+  id          Int       @id @default(autoincrement())
+  title       String
+  level       Int
+  description String?
+  created_at  DateTime? @default(now())
+  updated_at  DateTime? @updatedAt
+
+  employees employees[]
+}
+
+model roles {
+  id          Int       @id @default(autoincrement())
+  name        String    @unique
+  description String?
+  created_at  DateTime? @default(now())
+
+  users       user_roles[]
+  permissions role_permissions[]
+}
+
+model user_roles {
+  id          Int       @id @default(autoincrement())
+  user_id     Int
+  role_id     Int
+  assigned_at DateTime? @default(now())
+
+  user employees @relation(fields: [user_id], references: [id])
+  role roles     @relation(fields: [role_id], references: [id])
+}
+
+model role_permissions {
+  id             Int    @id @default(autoincrement())
+  role_id        Int
+  permission_key String
+
+  role roles @relation(fields: [role_id], references: [id])
+}
+
+model attendance_records {
+  id                 Int               @id @default(autoincrement())
+  employee_id        Int
+  attendance_date    DateTime
+  clock_in           DateTime?
+  clock_out          DateTime?
+  total_work_seconds Int?
+  source             AttendanceSource?
+  device_id          String?
+  location           Json?
+  status             AttendanceStatus?
+  notes              String?
+  created_at         DateTime?         @default(now())
+  updated_at         DateTime?         @updatedAt
+
+  employee employees @relation(fields: [employee_id], references: [id])
+
+  @@unique([employee_id, attendance_date])
+}
+
+model timesheets {
+  id           Int              @id @default(autoincrement())
+  employee_id  Int
+  week_start   DateTime
+  week_end     DateTime
+  total_hours  Float?
+  status       TimesheetStatus?
+  submitted_at DateTime?
+  approved_at  DateTime?
+  approved_by  Int?
+  created_at   DateTime?        @default(now())
+  updated_at   DateTime?        @updatedAt
+
+  employee employees           @relation(fields: [employee_id], references: [id])
+  approver employees?          @relation("TimesheetApprover", fields: [approved_by], references: [id])
+  entries  timesheet_entries[]
+
+  @@unique([employee_id, week_start])
+}
+
+model timesheet_entries {
+  id               Int      @id @default(autoincrement())
+  timesheet_id     Int
+  entry_date       DateTime
+  project_id       Int?
+  task_description String?
+  hours            Float?
+  metadata         Json?
+
+  timesheet timesheets @relation(fields: [timesheet_id], references: [id])
+}
+
+model leave_types {
+  id                     Int       @id @default(autoincrement())
+  code                   String    @unique
+  name                   String
+  default_allocated_days Float?
+  carry_forward          Boolean?
+  requires_document      Boolean?
+  accrual_policy         Json?
+  created_at             DateTime? @default(now())
+  updated_at             DateTime? @updatedAt
+
+  leaves   leave_applications[]
+  balances leave_balances[]
+}
+
+model leave_applications {
+  id               Int          @id @default(autoincrement())
+  employee_id      Int
+  leave_type_id    Int
+  start_date       DateTime
+  end_date         DateTime
+  duration_days    Float?
+  status           LeaveStatus?
+  applied_at       DateTime?    @default(now())
+  approved_by      Int?
+  approved_at      DateTime?
+  reason           String?
+  attachment_path  String?
+  manager_comments String?
+
+  employee   employees   @relation(fields: [employee_id], references: [id])
+  leave_type leave_types @relation(fields: [leave_type_id], references: [id])
+  approver   employees?  @relation("LeaveApprover", fields: [approved_by], references: [id])
+}
+
+model leave_balances {
+  id                          Int       @id @default(autoincrement())
+  employee_id                 Int
+  leave_type_id               Int
+  year                        Int
+  total_allocated             Float?
+  used                        Float?
+  carry_forward_from_previous Float?
+  created_at                  DateTime? @default(now())
+  updated_at                  DateTime? @updatedAt
+
+  employee   employees   @relation(fields: [employee_id], references: [id])
+  leave_type leave_types @relation(fields: [leave_type_id], references: [id])
+
+  @@unique([employee_id, leave_type_id, year])
+}
+
+model payroll_components {
+  id             Int                  @id @default(autoincrement())
+  code           String               @unique
+  name           String
+  component_type PayrollComponentType
+  tax_applicable Boolean?
+  metadata       Json?
+  created_at     DateTime?            @default(now())
+  updated_at     DateTime?            @updatedAt
+
+  structure_map payroll_structure_components[]
+}
+
+model payroll_structures {
+  id          Int       @id @default(autoincrement())
+  name        String
+  description String?
+  is_default  Boolean?
+  created_at  DateTime? @default(now())
+  updated_at  DateTime? @updatedAt
+
+  components  payroll_structure_components[]
+  assignments employee_payroll_assignments[]
+}
+
+model payroll_structure_components {
+  id                   Int       @id @default(autoincrement())
+  payroll_structure_id Int
+  payroll_component_id Int
+  amount               Float?
+  percentage           Float?
+  calculation_rule     String?
+  created_at           DateTime? @default(now())
+  updated_at           DateTime? @updatedAt
+
+  structure payroll_structures @relation(fields: [payroll_structure_id], references: [id])
+  component payroll_components @relation(fields: [payroll_component_id], references: [id])
+
+  @@unique([payroll_structure_id, payroll_component_id])
+}
+
+model employee_payroll_assignments {
+  id                   Int       @id @default(autoincrement())
+  employee_id          Int
+  payroll_structure_id Int
+  effective_from       DateTime
+  effective_to         DateTime?
+  created_at           DateTime? @default(now())
+  updated_at           DateTime? @updatedAt
+
+  employee  employees          @relation(fields: [employee_id], references: [id])
+  structure payroll_structures @relation(fields: [payroll_structure_id], references: [id])
+}
+
+model payslips {
+  id                   Int       @id @default(autoincrement())
+  employee_id          Int
+  payroll_period_start DateTime
+  payroll_period_end   DateTime
+  gross_pay            Float?
+  total_deductions     Float?
+  net_pay              Float?
+  breakdown            Json?
+  generated_at         DateTime? @default(now())
+  paid_at              DateTime?
+  payment_reference    String?
+
+  employee employees @relation(fields: [employee_id], references: [id])
+}
+
+model performance_goals {
+  id          Int         @id @default(autoincrement())
+  employee_id Int
+  title       String
+  description String?
+  kpi_target  Json?
+  start_date  DateTime
+  end_date    DateTime?
+  status      GoalStatus?
+  created_at  DateTime?   @default(now())
+  updated_at  DateTime?   @updatedAt
+
+  employee employees @relation(fields: [employee_id], references: [id])
+}
+
+model performance_reviews {
+  id                  Int       @id @default(autoincrement())
+  employee_id         Int
+  reviewer_id         Int
+  review_period_start DateTime
+  review_period_end   DateTime
+  overall_rating      Float?
+  summary             String?
+  review_data         Json?
+  created_at          DateTime? @default(now())
+
+  employee employees         @relation("EmployeeReview", fields: [employee_id], references: [id])
+  reviewer employees         @relation("ReviewerRelation", fields: [reviewer_id], references: [id])
+  feedback review_feedback[]
+}
+
+model review_feedback {
+  id               Int       @id @default(autoincrement())
+  review_id        Int
+  from_employee_id Int
+  feedback_text    String?
+  rating           Float?
+  created_at       DateTime? @default(now())
+
+  review        performance_reviews @relation(fields: [review_id], references: [id])
+  from_employee employees           @relation(fields: [from_employee_id], references: [id])
+}
+
+model jobs {
+  id                Int        @id @default(autoincrement())
+  title             String
+  department_id     Int
+  hiring_manager_id Int
+  location          String?
+  employment_type   String?
+  status            JobStatus?
+  posted_at         DateTime?  @default(now())
+  closed_at         DateTime?
+  description       String?
+  created_at        DateTime?  @default(now())
+  updated_at        DateTime?  @updatedAt
+
+  department departments  @relation(fields: [department_id], references: [id])
+  manager    employees    @relation(fields: [hiring_manager_id], references: [id])
+  applicants applicants[]
+  offers     offers[]
+}
+
+model applicants {
+  id          Int       @id @default(autoincrement())
+  job_id      Int
+  first_name  String
+  last_name   String
+  email       String
+  phone       String?
+  resume_path String?
+  resume_text String?
+  source      String?
+  status      String?
+  applied_at  DateTime? @default(now())
+  metadata    Json?
+
+  job        jobs         @relation(fields: [job_id], references: [id])
+  interviews interviews[]
+  offers     offers[]
+}
+
+model interviews {
+  id               Int      @id @default(autoincrement())
+  applicant_id     Int
+  scheduled_at     DateTime
+  mode             String?
+  interviewers     Json?
+  location         String?
+  duration_minutes Int?
+  outcome          String?
+  notes            String?
+
+  applicant applicants @relation(fields: [applicant_id], references: [id])
+}
+
+model offers {
+  id                Int       @id @default(autoincrement())
+  applicant_id      Int
+  job_id            Int
+  offered_by        Int
+  offered_salary    Float?
+  currency          String?
+  offer_letter_path String?
+  status            String?
+  issued_at         DateTime? @default(now())
+  accepted_at       DateTime?
+
+  applicant applicants @relation(fields: [applicant_id], references: [id])
+  job       jobs       @relation(fields: [job_id], references: [id])
+  offerer   employees  @relation(fields: [offered_by], references: [id])
+}
+
+model expenses {
+  id           Int       @id @default(autoincrement())
+  employee_id  Int
+  amount       Float?
+  currency     String?
+  expense_date DateTime
+  category     String?
+  description  String?
+  receipt_path String?
+  status       String?
+  approved_by  Int?
+  approved_at  DateTime?
+  created_at   DateTime? @default(now())
+
+  employee employees  @relation(fields: [employee_id], references: [id])
+  approver employees? @relation("ExpenseApprover", fields: [approved_by], references: [id])
+}
+
+model trainings {
+  id          Int       @id @default(autoincrement())
+  title       String
+  description String?
+  provider    String?
+  start_date  DateTime
+  end_date    DateTime
+  capacity    Int?
+  metadata    Json?
+  created_at  DateTime? @default(now())
+
+  enrollments training_enrollments[]
+}
+
+model training_enrollments {
+  id               Int       @id @default(autoincrement())
+  training_id      Int
+  employee_id      Int
+  status           String?
+  enrolled_at      DateTime? @default(now())
+  completed_at     DateTime?
+  certificate_path String?
+
+  training trainings @relation(fields: [training_id], references: [id])
+  employee employees @relation(fields: [employee_id], references: [id])
+}
+
+model announcements {
+  id         Int       @id @default(autoincrement())
+  title      String
+  body       String
+  posted_by  Int
+  posted_at  DateTime? @default(now())
+  visibility Json?
+
+  poster employees @relation(fields: [posted_by], references: [id])
+}
+
+model audit_logs {
+  id         Int       @id @default(autoincrement())
+  user_id    Int
+  action     String?
+  entity     String?
+  entity_id  Int?
+  changes    Json?
+  ip_address String?
+  user_agent String?
+  created_at DateTime? @default(now())
+
+  user employees @relation(fields: [user_id], references: [id])
+}
+
+model integrations {
+  id             Int       @id @default(autoincrement())
+  name           String
+  type           String?
+  config         Json?
+  enabled        Boolean?
+  last_synced_at DateTime?
+}
+
+model settings {
+  key        String    @id
+  value      Json?
+  updated_at DateTime?
+}
+
+model search_index {
+  id          Int       @id @default(autoincrement())
+  entity_type String
+  entity_id   Int
+  // TsVector native type removed – store as plain text or manage tsvector via SQL
+  payload     String?
+  updated_at  DateTime?
+}
