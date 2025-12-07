@@ -1,12 +1,13 @@
 import type { Request, Response } from "express";
 import { prisma } from "../utils/db";
 import jwt from "jsonwebtoken";
+import bcrypt from "bcrypt"
 
 interface User {
   first_name: string;
   last_name: string;
   email: string;
-  password_hash: string;
+  password: string;
 }
 
 interface signInPayload {
@@ -24,7 +25,7 @@ export const registerUser = async (req: Request, res: Response) => {
   try {
     const user: User = req.body;
 
-    const { first_name, last_name, email, password_hash } = user;
+    const { first_name, last_name, email, password } = user;
 
     const alreadyExsist = await prisma.employees.findFirst({
       where: {
@@ -42,12 +43,14 @@ export const registerUser = async (req: Request, res: Response) => {
       });
     }
 
-    if (!first_name || !last_name || !email || !password_hash) {
+    if (!first_name || !last_name || !email || !password) {
       return res.status(400).json({
         success: false,
         message: "first_name, last_name, email, password_hash are required.",
       });
     }
+
+    const password_hash:string =   await bcrypt.hash(password,10);
 
     const createdUser = await prisma.employees.create({
       data: {
@@ -97,7 +100,9 @@ export const signIn = async (req: Request, res: Response) => {
       });
     }
 
-    if (ExistedUser.password_hash !== password) {
+    const isValid:boolean = await bcrypt.compare(password,ExistedUser.password_hash)
+
+    if (!isValid) {
       return res.status(401).json({
         success: false,
         message: "Invalid Credentials",
