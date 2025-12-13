@@ -8,6 +8,7 @@ import type {
   SignInRequestDto,
 } from '../dto/user.dto';
 import type { ErrorResponse, successResponse } from '../types/apiResponse';
+import type { JWTPayload } from '../types/auth';
 
 const secret = process.env.JWT_SECRET;
 
@@ -112,13 +113,12 @@ export const signIn = async (
       });
     }
 
-    const token = jwt.sign(
-      {
-        id: ExistedUser.id,
-        name: `${ExistedUser.first_name} ${ExistedUser.last_name}`,
-      },
-      secret,
-    );
+    const payload = {
+      id: ExistedUser.id,
+      name: `${ExistedUser.first_name} ${ExistedUser.last_name}`,
+    } satisfies JWTPayload;
+
+    const token = jwt.sign(payload, secret);
 
     return res.status(200).json({
       success: true,
