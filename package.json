@@ -3,12 +3,21 @@
   "module": "index.ts",
   "type": "module",
   "private": true,
+  "lint-staged": {
+    "**/*.{ts,js,json,md}": "prettier --write"
+  },
   "scripts": {
-    "dev": "bun --watch index.js"
+    "dev": "bun --watch index.js",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "prepare": "husky"
   },
   "devDependencies": {
     "@types/bun": "latest",
-    "nodemon": "^3.1.11"
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.7",
+    "nodemon": "^3.1.11",
+    "prettier": "^3.7.4"
   },
   "peerDependencies": {
     "typescript": "^5"
