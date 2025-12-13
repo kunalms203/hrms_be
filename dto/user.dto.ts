@@ -14,4 +14,4 @@ export interface AuthResponseDto {
   token: string;
 }
 
-const x = 1;
+const vj = 2222;
