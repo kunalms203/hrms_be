@@ -13,5 +13,3 @@ export interface SignInRequestDto {
 export interface AuthResponseDto {
   token: string;
 }
-
-const vj = 2222;
