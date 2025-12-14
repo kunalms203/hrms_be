@@ -81,13 +81,9 @@ enum JobStatus {
   closed
 }
 
-/**
- * ========================= MODELS =========================
- */
 
 model employees {
   id              Int             @id @default(autoincrement())
-  employee_code   String          @unique
   first_name      String
   middle_name     String?
   last_name       String
@@ -114,11 +110,11 @@ model employees {
   department  departments?  @relation(fields: [department_id], references: [id])
   designation designations? @relation(fields: [designation_id], references: [id])
 
-  // Self relation (manager → subordinates)
+  
   manager      employees?  @relation("EmployeeManager", fields: [manager_id], references: [id])
   subordinates employees[] @relation("EmployeeManager")
 
-  // Documents
+
   documents          employee_documents[]
   uploaded_documents employee_documents[] @relation("DocumentUploader")
 
@@ -152,9 +148,8 @@ model employees {
   // Training
   training_records training_enrollments[]
 
-  // Jobs / offers
-  managed_jobs jobs[] // hiring_manager
-  offers       offers[] // offers.offerrer
+  managed_jobs jobs[] 
+  offers       offers[] 
 
   // Communication / logs
   announcements announcements[]
@@ -188,7 +183,7 @@ model departments {
   parent    departments?  @relation("DeptHierarchy", fields: [parent_department_id], references: [id])
   children  departments[] @relation("DeptHierarchy")
   employees employees[]
-  jobs      jobs[] // back relation from jobs.department
+  jobs      jobs[]
 }
 
 model designations {
