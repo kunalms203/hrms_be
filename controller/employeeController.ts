@@ -4,6 +4,7 @@ import type { createEmployeeRequestDto, employee } from '../dto/employee.dto';
 import type { ErrorResponse, SuccessResponse } from '../types/apiResponse';
 import bcrypt from 'bcrypt';
 import { employeeSelector } from '../prisma/selectors/employee';
+import { EmployeeStatus } from '../generated/prisma';
 
 export const createEmployee = async (
   req: Request,
@@ -105,6 +106,85 @@ export const getEmpoyeeDetails = async (
     return res.status(400).json({
       success: false,
       message: 'Something went wrong!',
+    });
+  }
+};
+
+export const updateEmployee = async (
+  req: Request,
+  res: Response<SuccessResponse<employee> | ErrorResponse>,
+) => {
+  try {
+    const { id } = req.params;
+    const body: Partial<createEmployeeRequestDto & { status: EmployeeStatus }> =
+      req.body;
+
+    const existingEmployee = await prisma.employees.findUnique({
+      where: { id: Number(id) },
+    });
+
+    if (!existingEmployee) {
+      return res.status(404).json({
+        success: false,
+        message: 'Employee not found',
+      });
+    }
+
+    if (body.email && body.email !== existingEmployee.email) {
+      const emailExists = await prisma.employees.findUnique({
+        where: { email: body.email },
+      });
+
+      if (emailExists) {
+        return res.status(409).json({
+          success: false,
+          message: 'Email already exists',
+        });
+      }
+    }
+
+    let password_hash: string | undefined;
+    if (body.password) {
+      password_hash = await bcrypt.hash(body.password, 10);
+    }
+
+    const updatedEmployee = await prisma.employees.update({
+      where: { id: Number(id) },
+      data: {
+        first_name: body.first_name,
+        middle_name: body.middle_name,
+        last_name: body.last_name,
+        display_name: body.display_name,
+        email: body.email,
+        phone: body.phone,
+        dob: body.dob,
+        gender: body.gender,
+        address: body.address,
+        bank_details: body.bank_details,
+        national_id: body.national_id,
+        joining_date: body.joining_date
+          ? new Date(body.joining_date)
+          : undefined,
+        end_date: body.end_date,
+        department_id: body.department_id,
+        designation_id: body.designation_id,
+        manager_id: body.manager_id,
+        password_hash,
+        status: body.status,
+      },
+      select: employeeSelector,
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: 'Employee updated successfully',
+      data: updatedEmployee,
+    });
+  } catch (e) {
+    console.error(e);
+    return res.status(400).json({
+      success: false,
+      message: 'Something went wrong',
     });
   }
 };

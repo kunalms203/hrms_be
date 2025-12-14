@@ -98,7 +98,7 @@ model employees {
   joining_date    DateTime?
   end_date        DateTime?
   password_hash        String
-  status          EmployeeStatus?
+  status          EmployeeStatus? @default(active)
   employment_type EmploymentType?
   custom_fields   Json?
   created_at      DateTime?       @default(now())
