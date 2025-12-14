@@ -7,7 +7,7 @@ import type {
   RegisterRequestDto,
   SignInRequestDto,
 } from '../dto/user.dto';
-import type { ErrorResponse, successResponse } from '../types/apiResponse';
+import type { ErrorResponse, SuccessResponse } from '../types/apiResponse';
 import type { JWTPayload } from '../types/auth';
 
 const secret = process.env.JWT_SECRET;
@@ -18,7 +18,7 @@ if (!secret) {
 
 export const registerUser = async (
   req: Request,
-  res: Response<ErrorResponse | successResponse<AuthResponseDto>>,
+  res: Response<ErrorResponse | SuccessResponse<AuthResponseDto>>,
 ) => {
   try {
     const user: RegisterRequestDto = req.body;
@@ -83,7 +83,7 @@ export const registerUser = async (
 
 export const signIn = async (
   req: Request,
-  res: Response<ErrorResponse | successResponse<AuthResponseDto>>,
+  res: Response<ErrorResponse | SuccessResponse<AuthResponseDto>>,
 ) => {
   try {
     const { email, password }: SignInRequestDto = req.body;

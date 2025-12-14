@@ -1,0 +1,26 @@
+import type { Prisma } from '../../generated/prisma';
+
+export const employeeSelector: Prisma.employeesSelect = {
+  id: true,
+  first_name: true,
+  middle_name: true,
+  last_name: true,
+  display_name: true,
+  email: true,
+  phone: true,
+  dob: true,
+  gender: true,
+  address: true,
+  bank_details: true,
+  national_id: true,
+  joining_date: true,
+  end_date: true,
+  status: true,
+  employment_type: true,
+  custom_fields: true,
+  created_at: true,
+  updated_at: true,
+  department_id: true,
+  designation_id: true,
+  manager_id: true,
+};

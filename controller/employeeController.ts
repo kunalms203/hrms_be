@@ -1,13 +1,13 @@
 import type { Request, Response } from 'express';
 import { prisma } from '../utils/db';
-import type { createEmployeeRequestDto } from '../dto/employee.dto';
-import type { ErrorResponse, successResponse } from '../types/apiResponse';
+import type { createEmployeeRequestDto, employee } from '../dto/employee.dto';
+import type { ErrorResponse, SuccessResponse } from '../types/apiResponse';
 import bcrypt from 'bcrypt';
-import type { employees } from '../generated/prisma';
+import { employeeSelector } from '../prisma/selectors/employee';
 
 export const createEmployee = async (
   req: Request,
-  res: Response<successResponse<employees> | ErrorResponse>,
+  res: Response<SuccessResponse<employee> | ErrorResponse>,
 ) => {
   try {
     const body: createEmployeeRequestDto = req.body;
@@ -57,6 +57,7 @@ export const createEmployee = async (
         designation_id: body.designation_id,
         manager_id: body.manager_id,
       },
+      select: employeeSelector,
     });
 
     return res.status(201).send({
@@ -69,6 +70,41 @@ export const createEmployee = async (
     return res.status(400).json({
       success: false,
       message: 'Something went wrong',
+    });
+  }
+};
+
+export const getEmpoyeeDetails = async (
+  req: Request,
+  res: Response<SuccessResponse<employee> | ErrorResponse>,
+) => {
+  try {
+    const { id } = req.params;
+
+    const employee = await prisma.employees.findUnique({
+      where: {
+        id: Number(id),
+      },
+      select: employeeSelector,
+    });
+
+    if (!employee) {
+      return res.status(404).json({
+        success: false,
+        message: 'Employee not found',
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: `Successfully found the emlpoyee with id ${id}`,
+      data: employee,
+    });
+  } catch (e) {
+    console.log('error occurred ', e);
+    return res.status(400).json({
+      success: false,
+      message: 'Something went wrong!',
     });
   }
 };
