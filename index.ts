@@ -3,7 +3,7 @@ import 'dotenv/config';
 import mainRouter from './routes/index';
 
 const app = express();
-const port = process.env.PORT;
+const port = process.env.PORT || 4000;
 
 app.use(express.json());
 
