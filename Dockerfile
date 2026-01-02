@@ -8,7 +8,6 @@ RUN bun install
 
 COPY . .
 
-
 EXPOSE 4000
 
 CMD ["sh","-c","bunx prisma generate && bun run dev"]

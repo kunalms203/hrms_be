@@ -48,14 +48,14 @@ export default [
     rules: {
       ...tsPlugin.configs.recommended.rules,
 
-      // ✅ Practical production rules
+      // Practical production rules
       "@typescript-eslint/no-unused-vars": [
         "error",
         { argsIgnorePattern: "^_" },
       ],
       "@typescript-eslint/no-explicit-any": "warn",
 
-      // 🔕 Disable noisy rules for backend
+      // Disable noisy rules for backend
       "@typescript-eslint/no-empty-object-type": "off",
       "@typescript-eslint/no-unsafe-function-type": "off",
 
@@ -64,8 +64,5 @@ export default [
     },
   },
 
-  // -----------------------
-  // 4. PRETTIER COMPAT
-  // -----------------------
   prettier,
 ];

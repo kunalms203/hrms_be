@@ -13,7 +13,13 @@ export const createEmployee = async (
   try {
     const body: createEmployeeRequestDto = req.body;
 
-    if (!body.first_name || !body.last_name || !body.email || !body.password) {
+    if (
+      !body.first_name ||
+      !body.last_name ||
+      !body.email ||
+      !body.password ||
+      !body.role_id
+    ) {
       return res.status(403).json({
         success: false,
         message: 'You must fill mandatory feilds',
@@ -57,6 +63,11 @@ export const createEmployee = async (
         department_id: body.department_id,
         designation_id: body.designation_id,
         manager_id: body.manager_id,
+        roles: {
+          create: {
+            role_id: body.role_id,
+          },
+        },
       },
       select: employeeSelector,
     });

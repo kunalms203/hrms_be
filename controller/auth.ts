@@ -9,6 +9,7 @@ import type {
 } from '../dto/user.dto';
 import type { ErrorResponse, SuccessResponse } from '../types/apiResponse';
 import type { JWTPayload } from '../types/auth';
+import { employeeSelector } from '../prisma/selectors/employee';
 
 const secret = process.env.JWT_SECRET;
 
@@ -23,7 +24,7 @@ export const registerUser = async (
   try {
     const user: RegisterRequestDto = req.body;
 
-    const { first_name, last_name, email, password } = user;
+    const { first_name, last_name, email, password, role_id } = user;
 
     const alreadyExsist = await prisma.employees.findUnique({
       where: {
@@ -41,10 +42,11 @@ export const registerUser = async (
       });
     }
 
-    if (!first_name || !last_name || !email || !password) {
+    if (!first_name || !last_name || !email || !password || !role_id) {
       return res.status(400).json({
         success: false,
-        message: 'first_name, last_name, email, password_hash are required.',
+        message:
+          'first_name, last_name, email, password_hash, role_id are required.',
       });
     }
 
@@ -56,7 +58,13 @@ export const registerUser = async (
         last_name,
         email,
         password_hash,
+        roles: {
+          create: {
+            role_id,
+          },
+        },
       },
+      select: employeeSelector,
     });
 
     const token = jwt.sign(
@@ -70,7 +78,7 @@ export const registerUser = async (
     return res.status(201).json({
       success: true,
       message: 'Account Created Successfully',
-      data: { token },
+      data: { token, createdUser },
     });
   } catch (e) {
     console.log('error occured', e);

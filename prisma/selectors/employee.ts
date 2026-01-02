@@ -23,4 +23,5 @@ export const employeeSelector: Prisma.employeesSelect = {
   department_id: true,
   designation_id: true,
   manager_id: true,
+  roles: true,
 };

@@ -18,6 +18,7 @@ export interface createEmployeeRequestDto {
   department_id?: number;
   designation_id?: number;
   manager_id?: number;
+  role_id: number;
 }
 
 export interface employee {
